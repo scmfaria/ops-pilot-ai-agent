@@ -1,0 +1,23 @@
+{
+  "copilot.agent.enable": true,
+  "copilot.agent.allowedCommands": [
+    "npm run",
+    "npm run test",
+    "npx tsc",
+    "node",
+    "git status",
+    "git diff",
+    "git add",
+    "git commit"
+  ],
+  "copilot.agent.deniedCommands": [
+    "rm -rf",
+    "sudo",
+    "git push --force",
+    "cat .env",
+    "grep .env"
+  ],
+  "copilot.agent.requireManualApproval": [
+    "git push"
+  ]
+}
