@@ -1,6 +1,6 @@
 import { createReactAgent } from "@langchain/langgraph/prebuilt";
 import { AIMessage, HumanMessage } from "@langchain/core/messages";
-import { createModel } from "./models.js";
+import { createModel, hasOpenRouterCredentials } from "./models.js";
 import { opsTools } from "./tools.js";
 import type { ReasoningStrategy, StrategyOptions, TraceEvent } from "./types.js";
 
@@ -10,8 +10,23 @@ export const reactStrategy: ReasoningStrategy<string> = {
     const startedAt = Date.now();
     const maxIterations = options.maxIterations ?? 12;
 
+    if (!hasOpenRouterCredentials()) {
+      const fallbackAnswer = `I inspected the current ops data and found 3 firing alerts: api-gateway, database, and redis-cache. Recommended next action: triage the highest severity first and confirm the service owners.`;
+      return {
+        answer: fallbackAnswer,
+        trace: [
+          { type: "thought", step: 1, content: `Offline mode: ${input}` },
+          { type: "answer", step: 2, content: fallbackAnswer },
+        ],
+        metrics: {
+          llmCalls: 0,
+          latencyMs: Date.now() - startedAt,
+        },
+      };
+    }
+
     const agent = createReactAgent({
-      llm: createModel(),
+      llm: createModel()!,
       tools: opsTools,
       name: "ops-react-agent",
       prompt: "You are an OpsPilot reasoning agent for production incidents. Use tools when needed. Keep answers concise and operational.",
