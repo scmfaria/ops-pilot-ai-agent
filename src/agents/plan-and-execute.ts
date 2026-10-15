@@ -148,6 +148,10 @@ export class PlanAndExecuteStrategy implements ReasoningStrategy<string> {
         }
       }
 
+      if (options.noReplanner) {
+        break;
+      }
+
       if (iteration >= maxIterations - 1) {
         break;
       }

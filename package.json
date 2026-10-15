@@ -4,7 +4,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "tsx src/indez.ts",
+    "dev": "tsx src/http/server.ts",
     "arena": "tsx src/arena.ts",
     "bench": "node --import tsx src/bench.ts",
     "seed": "tsx src/agents/seed.ts",

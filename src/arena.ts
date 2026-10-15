@@ -1,7 +1,12 @@
 import { parseArgs } from "node:util";
 import { reactStrategy } from "./agents/react.js";
 import { planAndExecuteStrategy } from "./agents/plan-and-execute.js";
+import { withReflection } from "./agents/reflection.js";
 import { formatTrace } from "./agents/trace.js";
+import { hasOpenRouterCredentials } from "./agents/models.js";
+
+const reflectedReact = withReflection(reactStrategy, { maxReflections: 2 });
+const reflectedPlanAndExecute = withReflection(planAndExecuteStrategy, { maxReflections: 2 });
 
 const { values } = parseArgs({
   options: {
@@ -28,6 +33,8 @@ const { values } = parseArgs({
 const strategies = {
   react: reactStrategy,
   "plan-and-execute": planAndExecuteStrategy,
+  "reflect:react": reflectedReact,
+  "reflect:plan-and-execute": reflectedPlanAndExecute,
 } as const;
 
 const rawStrategies = Array.isArray(values.strategies)
@@ -38,6 +45,7 @@ const rawStrategies = Array.isArray(values.strategies)
 const selected = rawStrategies.filter((entry): entry is keyof typeof strategies => entry in strategies);
 const maxIterations = Number(values["max-iterations"] ?? 6);
 const input = String(values.input ?? "List all firing alerts and suggest the next operational action.");
+const mode = hasOpenRouterCredentials() ? "live" : "offline";
 
 const run = async () => {
   for (const strategyName of selected) {
@@ -45,6 +53,7 @@ const run = async () => {
     const result = await strategy.run(input, { maxIterations });
 
     console.log(`\n=== Strategy: ${strategy.name} ===`);
+    console.log(`mode: ${mode}`);
     console.log(`answer: ${result.answer}`);
     console.log(`metrics: ${JSON.stringify(result.metrics)}`);
     console.log(`trace:\n${formatTrace(result.trace)}`);

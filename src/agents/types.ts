@@ -46,6 +46,7 @@ export type StrategyResult = {
 
 export type StrategyOptions = {
   maxIterations?: number;
+  noReplanner?: boolean;
 };
 
 export interface ReasoningStrategy<TInput = unknown> {
