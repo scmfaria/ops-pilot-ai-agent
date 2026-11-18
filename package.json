@@ -8,6 +8,7 @@
     "arena": "tsx src/arena.ts",
     "bench": "node --import tsx src/bench.ts",
     "seed": "tsx src/agents/seed.ts",
+    "mcp": "tsx src/mcp/server.ts",
     "test": "node --import tsx --test src/**/*.test.ts",
     "typecheck": "tsc --noEmit"
   },
@@ -15,6 +16,7 @@
     "@langchain/core": "^0.3.70",
     "@langchain/langgraph": "^0.2.56",
     "@langchain/openai": "^0.3.7",
+    "@modelcontextprotocol/sdk": "^1.32.2",
     "express": "^4.21.2",
     "sequelize": "^6.37.5",
     "zod": "^3.24.1"
