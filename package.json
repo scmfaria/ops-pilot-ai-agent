@@ -10,7 +10,9 @@
     "seed": "tsx src/agents/seed.ts",
     "mcp": "tsx src/mcp/server.ts",
     "test": "node --import tsx --test src/**/*.test.ts",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "war-room": "npm --prefix web run dev",
+    "war-room:build": "npm --prefix web run build"
   },
   "dependencies": {
     "@langchain/core": "^0.3.70",
