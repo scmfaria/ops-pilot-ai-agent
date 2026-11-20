@@ -29,10 +29,46 @@ function composeConversationPrompt(message: string, history: Array<{ role: "user
   };
 }
 
-export function createApp(deps: { store?: OpsStore; resolveStrategy?: (name: string, reflect?: boolean) => ReasoningStrategy<string> } = {}) {
+export const DEFAULT_CORS_ORIGINS = ["http://localhost:5173", "http://127.0.0.1:5173"] as const;
+const CORS_ALLOWED_METHODS = "POST, OPTIONS";
+const CORS_ALLOWED_HEADERS = "Content-Type, Authorization";
+
+export function parseAllowedOrigins(raw: string | undefined): string[] {
+  const configured = (raw ?? "")
+    .split(",")
+    .map((origin) => origin.trim().replace(/\/+$/, ""))
+    .filter(Boolean);
+  return [...new Set([...DEFAULT_CORS_ORIGINS, ...configured])];
+}
+
+export function createApp(
+  deps: {
+    store?: OpsStore;
+    resolveStrategy?: (name: string, reflect?: boolean) => ReasoningStrategy<string>;
+    corsOrigins?: string[];
+  } = {},
+) {
   const app = express();
   const store = deps.store ?? createSqliteOpsStore();
   const resolveStrategyFn = deps.resolveStrategy ?? resolveStrategy;
+
+  const allowedOrigins = new Set(deps.corsOrigins ?? parseAllowedOrigins(process.env.OPSPILOT_CORS_ORIGINS));
+
+  app.use((req: Request, res: Response, next: NextFunction) => {
+    const origin = req.headers.origin;
+    res.setHeader("Vary", "Origin");
+    if (origin && allowedOrigins.has(origin)) {
+      res.setHeader("Access-Control-Allow-Origin", origin);
+      res.setHeader("Access-Control-Allow-Methods", CORS_ALLOWED_METHODS);
+      res.setHeader("Access-Control-Allow-Headers", CORS_ALLOWED_HEADERS);
+      res.setHeader("Access-Control-Max-Age", "600");
+    }
+
+    if (req.method === "OPTIONS") {
+      return res.sendStatus(204);
+    }
+    next();
+  });
 
   app.use(express.json());
 
@@ -66,11 +102,12 @@ export function createApp(deps: { store?: OpsStore; resolveStrategy?: (name: str
 
       const timeoutMs = 180_000;
       const resultPromise = strategyInstance.run(prompt, { maxIterations: 6 });
+      let timeoutHandle: NodeJS.Timeout | undefined;
       const timeoutPromise = new Promise<never>((_, reject) => {
-        setTimeout(() => reject(new Error("timeout")), timeoutMs);
+        timeoutHandle = setTimeout(() => reject(new Error("timeout")), timeoutMs);
       });
 
-      const result = await Promise.race([resultPromise, timeoutPromise]);
+      const result = await Promise.race([resultPromise, timeoutPromise]).finally(() => clearTimeout(timeoutHandle));
       store.appendMessage(conversationId, "assistant", result.answer);
 
       return res.status(200).json({
@@ -86,6 +123,17 @@ export function createApp(deps: { store?: OpsStore; resolveStrategy?: (name: str
 
       return next(error);
     }
+  });
+
+  app.use((error: unknown, _req: Request, res: Response, next: NextFunction) => {
+    if (res.headersSent) {
+      return next(error);
+    }
+    if (error instanceof SyntaxError && "body" in error) {
+      return res.status(400).json({ error: "invalid_body", message: "Malformed JSON body" });
+    }
+    console.error(error);
+    return res.status(500).json({ error: "internal_error" });
   });
 
   return app;
